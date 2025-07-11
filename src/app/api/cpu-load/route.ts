@@ -9,10 +9,12 @@ export async function GET() {
     return NextResponse.json({
       loadAverage,
       timestamp: new Date().toISOString(),
-      cpuCount: cpus
+      cpuCount: cpus,
     });
+
   } catch (error) {
     console.error('Error getting CPU load:', error);
+
     return NextResponse.json(
       { 
         error: 'Failed to retrieve CPU load',
