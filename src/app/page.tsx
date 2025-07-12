@@ -2,28 +2,31 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { CONFIG, DataPoint, Alert, Episode } from "@/lib/definitions";
-import { checkTransition } from "@/lib/utils";
+import { checkTransition, formatPercentage } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import TimeSeriesChart from "@/components/TimeSeriesChart";
 import styles from "./page.module.css";
 
-
 const loadFromLocalStorage = (key: string) => {
   try {
-    if (typeof window === 'undefined') return null;
+    if (typeof window === "undefined") return null;
     const items = localStorage.getItem(key);
     return items ? JSON.parse(items) : null;
   } catch (e) {
-    console.error('Error loading from local storage', e)
+    console.error("Error loading from local storage", e);
   }
-}
+};
 
-const saveToLocalStorage = (key: string, data: DataPoint[] | Alert[] | Episode) => {
-   try {
-    if (typeof window === 'undefined') return null;
+const saveToLocalStorage = (
+  key: string,
+  data: DataPoint[] | Alert[] | Episode
+) => {
+  try {
+    if (typeof window === "undefined") return null;
+    console.log('saved on ls:', data)
     localStorage.setItem(key, JSON.stringify(data));
   } catch (e) {
-    console.error('Error saving to local storage', e)
+    console.error("Error saving to local storage", e);
   }
 };
 
@@ -35,32 +38,22 @@ const processNewDataPoint = (
   setAlert: React.Dispatch<React.SetStateAction<Alert[]>>,
   setTimeSeriesData: React.Dispatch<React.SetStateAction<DataPoint[]>>
 ): void => {
-  
   const currentList = [...prevList, currentData];
 
-  // filter the list 
-  const freshTimePoints = currentList.filter(c => {
-    const now = Date.now()
-    const pointTime = new Date(c.timestamp).getTime()
-    return (now - pointTime) > 100
-  } )
-
-  console.log(currentList.length, freshTimePoints.length)
-  saveToLocalStorage("items", freshTimePoints.slice(-CONFIG.CHART_DATA_POINTS));
-  setTimeSeriesData(freshTimePoints.slice(-CONFIG.CHART_DATA_POINTS));
+  setTimeSeriesData(currentList.slice(-CONFIG.CHART_DATA_POINTS));
 
   const transition = checkTransition(prevList, currentData, currentEpisode);
-
+  
   if (transition) {
     setCurrentEpisode(() => {
-      saveToLocalStorage("episode", transition.episode)
-      return transition.episode
+      saveToLocalStorage("episode", transition.episode);
+      return transition.episode;
     });
 
     setAlert((prev) => {
-      saveToLocalStorage("alerts", [...prev, transition.alert])
-      return [...prev, transition.alert]
-    } );
+      saveToLocalStorage("alerts", [...prev, transition.alert]);
+      return [...prev, transition.alert];
+    });
   }
 };
 
@@ -77,26 +70,25 @@ export default function Home() {
 
   useEffect(() => {
     const savedData = loadFromLocalStorage("items");
-    const savedCurrentEpisode = loadFromLocalStorage("episode")
+    const savedCurrentEpisode = loadFromLocalStorage("episode");
 
-    console.log('savedCurrentEpisode', savedCurrentEpisode)
+    // stale data if 15 mins > old
+    const cutOffDate = Date.now() - 1000 * 60 * 15;
+    const freshData = savedData.filter(
+      (d: DataPoint) => new Date(d.timestamp).getTime() > cutOffDate
+    );
+    console.log('freshData', freshData)
+    console.log('savedData', savedData)
+    if (freshData.length !== savedData.length) {
+      console.log('here?')
+      saveToLocalStorage("items", freshData);
+    }
 
-    // stale data if 30 mins > old
-    const cutOffDate = Date.now() - (1000 * 60 * 30)
-    const freshData = savedData.filter(d => new Date(d.timestamp).getTime() > cutOffDate)
-    console.log('fresh data:', freshData)
-    
-
-    if (savedData && savedData?.length > 0) {
+    if (freshData.length > 0) {
       setTimeSeriesData(savedData);
     }
     if (savedCurrentEpisode) {
-      setCurrentEpisode(savedCurrentEpisode)
-    }
-    if (freshData.length !== savedData.length) {
-      console.log('!!!fresh data:', freshData)
-      saveToLocalStorage('items', freshData)
-      setTimeSeriesData(freshData);
+      setCurrentEpisode(savedCurrentEpisode);
     }
   }, []);
 
@@ -115,20 +107,32 @@ export default function Home() {
 
   return (
     <div className={styles.container}>
-      <div>current value: {data?.loadAverage}</div>
+      <div className={styles.top}>
+        {
+          data && (
+            <div className={styles.card}>
+              <p>CPU Rate:</p>
+              <p>{formatPercentage(data?.loadAverage)}</p>
+            </div>
+          )
+        }
+        
+        {
+          currentEpisode && (
+            <div className={styles.card}>
+              {currentEpisode.state} since {currentEpisode.startTime}
+            </div>
+          )
+        }
+      </div>
 
-      {currentEpisode && (
-        <div> 
-          {currentEpisode.state} since {currentEpisode.startTime}
-        </div>
-      )}
-
-      {timeSeriesData.length === 0 ? (
-        <p>Collecting CPU data...</p>
-      ) : (
-        <TimeSeriesChart data={timeSeriesData} />
-      )}
-
+      {
+        timeSeriesData.length === 0 ? (
+          <p>Collecting CPU data...</p>
+        ) : (
+          <TimeSeriesChart data={timeSeriesData} />
+        )
+      }
 
       {alert.length > 0 && (
         <div>
