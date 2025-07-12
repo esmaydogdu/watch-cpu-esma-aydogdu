@@ -2,92 +2,29 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { CONFIG, DataPoint, Alert, Episode } from "@/lib/definitions";
+import { checkTransition } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import TimeSeriesChart from "@/components/TimeSeriesChart";
 import styles from "./page.module.css";
 
-// Helper functions
-const loadFromLocalStorage = (key: string): DataPoint[] => {
-  const items = localStorage.getItem(key);
-  return items ? JSON.parse(items) : [];
-};
 
-const saveToLocalStorage = (key: string, data: DataPoint[]) => {
-  localStorage.setItem(key, JSON.stringify(data));
-};
-
-// takes the list without appending the new data point, passes it separetely
-// or not, then we cont need the current data
-const checkTransition = (
-  prevList: DataPoint[],
-  currentData: DataPoint,
-  currentEpisode: Episode | null
-): null | { episode: Episode; alert: Alert } => {
-
-  if (prevList.length < CONFIG.ALERT_DATA_POINTS - 1) {
-    return null;
+const loadFromLocalStorage = (key: string) => {
+  try {
+    if (typeof window === 'undefined') return null;
+    const items = localStorage.getItem(key);
+    return items ? JSON.parse(items) : null;
+  } catch (e) {
+    console.error('Error loading from local storage', e)
   }
+}
 
-
-  const lastBatchIncludingCurrent = [...prevList, currentData].slice(
-    -CONFIG.ALERT_DATA_POINTS
-  );
-  const lastBatchExcludingCurrent = prevList.slice(-(CONFIG.ALERT_DATA_POINTS - 1));
-
-  const isInRecovery =
-    lastBatchExcludingCurrent.every(
-      (data) => data.loadAverage >= CONFIG.HIGH_LOAD_THRESHOLD
-    ) && currentData.loadAverage < CONFIG.HIGH_LOAD_THRESHOLD;
-
-  const isHighLoad = lastBatchIncludingCurrent.every(
-    (data) => data.loadAverage >= CONFIG.HIGH_LOAD_THRESHOLD
-  );
-
-  if (isHighLoad) {
-    console.log('in high load')
-    const newEpisode : Episode = {
-      state: "high_load",
-      startTime: lastBatchIncludingCurrent[0].timestamp,
-    };
-    const duration = CONFIG.ALERT_DATA_POINTS * CONFIG.POLL_INTERVAL;
-
-    if (currentEpisode?.state !== "high_load") {
-      console.log('in high load, alert sent')
-      return {
-        episode: newEpisode,
-        alert: {
-          type: "load",
-          message: `CPU is under heavy load for ${Math.floor(
-            duration / 60000 
-          )} seconds`,
-          timestamp: lastBatchIncludingCurrent[0].timestamp,
-        },
-      };
-    }
+const saveToLocalStorage = (key: string, data: DataPoint[] | Alert[] | Episode) => {
+   try {
+    if (typeof window === 'undefined') return null;
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving to local storage', e)
   }
-
-  if (isInRecovery) {
-    console.log('in recovery')
-    const duration = currentEpisode?.startTime
-      ? Date.parse(currentData.timestamp) - Date.parse(currentEpisode.startTime)
-      : 0;
-
-    return {
-      episode: {
-        state: "normal",
-        startTime: currentData.timestamp,
-      },
-      alert: {
-        type: "recovery",
-        message: `CPU has recovered from heavy load (lasted ${Math.floor(
-          duration / 60000
-        )}m)`,
-        timestamp: currentData.timestamp,
-      },
-    };
-  }
-
-  return null;
 };
 
 const processNewDataPoint = (
@@ -98,16 +35,32 @@ const processNewDataPoint = (
   setAlert: React.Dispatch<React.SetStateAction<Alert[]>>,
   setTimeSeriesData: React.Dispatch<React.SetStateAction<DataPoint[]>>
 ): void => {
-  const finalData = [...prevList, currentData];
+  
+  const currentList = [...prevList, currentData];
 
-  saveToLocalStorage("items", finalData.slice(-2 * CONFIG.CHART_DATA_POINTS));
-  setTimeSeriesData(finalData.slice(-CONFIG.CHART_DATA_POINTS));
+  // filter the list 
+  const freshTimePoints = currentList.filter(c => {
+    const now = Date.now()
+    const pointTime = new Date(c.timestamp).getTime()
+    return (now - pointTime) > 100
+  } )
+
+  console.log(currentList.length, freshTimePoints.length)
+  saveToLocalStorage("items", freshTimePoints.slice(-CONFIG.CHART_DATA_POINTS));
+  setTimeSeriesData(freshTimePoints.slice(-CONFIG.CHART_DATA_POINTS));
 
   const transition = checkTransition(prevList, currentData, currentEpisode);
 
   if (transition) {
-    setCurrentEpisode(transition.episode);
-    setAlert((prev) => [...prev, transition.alert]);
+    setCurrentEpisode(() => {
+      saveToLocalStorage("episode", transition.episode)
+      return transition.episode
+    });
+
+    setAlert((prev) => {
+      saveToLocalStorage("alerts", [...prev, transition.alert])
+      return [...prev, transition.alert]
+    } );
   }
 };
 
@@ -122,15 +75,31 @@ export default function Home() {
     refetchInterval: CONFIG.POLL_INTERVAL,
   });
 
-  // Load initial data from localStorage
   useEffect(() => {
     const savedData = loadFromLocalStorage("items");
-    if (savedData.length > 0) {
+    const savedCurrentEpisode = loadFromLocalStorage("episode")
+
+    console.log('savedCurrentEpisode', savedCurrentEpisode)
+
+    // stale data if 30 mins > old
+    const cutOffDate = Date.now() - (1000 * 60 * 30)
+    const freshData = savedData.filter(d => new Date(d.timestamp).getTime() > cutOffDate)
+    console.log('fresh data:', freshData)
+    
+
+    if (savedData && savedData?.length > 0) {
       setTimeSeriesData(savedData);
+    }
+    if (savedCurrentEpisode) {
+      setCurrentEpisode(savedCurrentEpisode)
+    }
+    if (freshData.length !== savedData.length) {
+      console.log('!!!fresh data:', freshData)
+      saveToLocalStorage('items', freshData)
+      setTimeSeriesData(freshData);
     }
   }, []);
 
-  // process data point on each response
   useEffect(() => {
     if (data) {
       processNewDataPoint(
@@ -149,7 +118,7 @@ export default function Home() {
       <div>current value: {data?.loadAverage}</div>
 
       {currentEpisode && (
-        <div>
+        <div> 
           {currentEpisode.state} since {currentEpisode.startTime}
         </div>
       )}

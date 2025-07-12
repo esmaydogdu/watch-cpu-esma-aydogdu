@@ -24,6 +24,7 @@ export default function TimeSeriesChart({ data }: Props) {
           stroke="#8884d8" 
           strokeWidth={2}
           isAnimationActive={false}
+          dot={false}
         />
       </LineChart>
     </ResponsiveContainer>
