@@ -40,3 +40,27 @@ a {
     color-scheme: dark;
   }
 }
+
+
+@keyframes blink {
+  0% {scale: 1;}
+  50% {scale: 1.2}
+  100% {scale: 1}
+}
+.blinking {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: white;
+  animation: blink 1s infinite;
+}
+.blinking--yellow {
+  background-color: yellow;
+}
+.blinking--green {
+  background-color: green;
+}
+.blinking--red {
+  background-color: red;
+}

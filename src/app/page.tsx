@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { CONFIG, DataPoint, Alert, Episode } from "@/lib/definitions";
-import { checkTransition, formatPercentage } from "@/lib/utils";
+import { checkTransition, formatPercentage, getColorCode } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import TimeSeriesChart from "@/components/TimeSeriesChart";
 import styles from "./page.module.css";
@@ -35,22 +35,22 @@ const processNewDataPoint = (
   currentData: DataPoint,
   currentEpisode: Episode | null,
   setCurrentEpisode: React.Dispatch<React.SetStateAction<Episode | null>>,
-  setAlert: React.Dispatch<React.SetStateAction<Alert[]>>,
+  setAlerts: React.Dispatch<React.SetStateAction<Alert[]>>,
   setTimeSeriesData: React.Dispatch<React.SetStateAction<DataPoint[]>>
 ): void => {
   const currentList = [...prevList, currentData];
 
   setTimeSeriesData(currentList.slice(-CONFIG.CHART_DATA_POINTS));
-
+  saveToLocalStorage('items', currentList.slice(-CONFIG.CHART_DATA_POINTS))
   const transition = checkTransition(prevList, currentData, currentEpisode);
-  
+  console.log('transition', transition)
   if (transition) {
     setCurrentEpisode(() => {
       saveToLocalStorage("episode", transition.episode);
       return transition.episode;
     });
 
-    setAlert((prev) => {
+    setAlerts((prev) => {
       saveToLocalStorage("alerts", [...prev, transition.alert]);
       return [...prev, transition.alert];
     });
@@ -60,7 +60,7 @@ const processNewDataPoint = (
 export default function Home() {
   const [timeSeriesData, setTimeSeriesData] = useState<DataPoint[]>([]);
   const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(null);
-  const [alert, setAlert] = useState<Alert[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
 
   const { data } = useQuery({
     queryKey: ["cpu-load"],
@@ -71,24 +71,34 @@ export default function Home() {
   useEffect(() => {
     const savedData = loadFromLocalStorage("items");
     const savedCurrentEpisode = loadFromLocalStorage("episode");
+    const savedAlerts = loadFromLocalStorage("alerts");
 
     // stale data if 15 mins > old
     const cutOffDate = Date.now() - 1000 * 60 * 15;
-    const freshData = savedData.filter(
-      (d: DataPoint) => new Date(d.timestamp).getTime() > cutOffDate
-    );
-    console.log('freshData', freshData)
-    console.log('savedData', savedData)
-    if (freshData.length !== savedData.length) {
-      console.log('here?')
+
+    if (savedData && savedData.length) {
+      const freshData = savedData.filter(
+        (d: DataPoint) => new Date(d.timestamp).getTime() > cutOffDate
+      );
+      setTimeSeriesData(freshData);
+      if (freshData.length !== savedData.length) {
       saveToLocalStorage("items", freshData);
     }
 
-    if (freshData.length > 0) {
-      setTimeSeriesData(savedData);
     }
+
+    // persist the history
+    if (savedAlerts) {
+      setAlerts(savedAlerts)
+    }
+
     if (savedCurrentEpisode) {
-      setCurrentEpisode(savedCurrentEpisode);
+      if (new Date(savedCurrentEpisode.startTime).getTime() > cutOffDate) {
+        setCurrentEpisode(savedCurrentEpisode);
+      } else {
+        setCurrentEpisode(null)
+        localStorage.removeItem('episode')
+      }
     }
   }, []);
 
@@ -99,7 +109,7 @@ export default function Home() {
         data,
         currentEpisode,
         setCurrentEpisode,
-        setAlert,
+        setAlerts,
         setTimeSeriesData
       );
     }
@@ -111,8 +121,11 @@ export default function Home() {
         {
           data && (
             <div className={styles.card}>
-              <p>CPU Rate:</p>
-              <p>{formatPercentage(data?.loadAverage)}</p>
+              <div className={styles.cardHeader}>
+                <span className={`blinking blinking--${getColorCode(data?.loadAverage)}`}></span>
+                <p>CPU Load</p>
+              </div>
+              <div className={styles.cardValue}>{formatPercentage(data?.loadAverage)}</div>
             </div>
           )
         }
@@ -120,7 +133,7 @@ export default function Home() {
         {
           currentEpisode && (
             <div className={styles.card}>
-              {currentEpisode.state} since {currentEpisode.startTime}
+              {currentEpisode.state} since {new Date(currentEpisode.startTime).toLocaleTimeString()}
             </div>
           )
         }
@@ -134,29 +147,28 @@ export default function Home() {
         )
       }
 
-      {alert.length > 0 && (
+
+      {/* maybe two columns for high load and recovery - also showing the total number in the header
+      also both should have see more  */}
+
+      {alerts.length > 0 && (
         <div>
-          {alert
-            .slice(-5)
+          {alerts
+            .slice()
             .reverse()
-            .map((alertItem, index) => (
+            .map((alert, index) => (
               <div
                 key={index}
                 className={`p-3 rounded-lg border ${
-                  alertItem.type === "recovery"
+                  alert.type === "recovery"
                     ? "bg-green-50 border-green-200 text-green-800"
                     : "bg-red-50 border-red-200 text-red-800"
                 }`}
               >
                 <div className="font-medium">
-                  {alertItem.type === "recovery" ? "✅" : "⚠️"}{" "}
-                  {alertItem.message}
+                  {alert.type === "recovery" ? "✅" : "⚠️"}{" "}
+                  {alert.message}
                 </div>
-                {alertItem.timestamp && (
-                  <div className="text-sm opacity-75">
-                    {new Date(alertItem.timestamp).toLocaleString()}
-                  </div>
-                )}
               </div>
             ))}
         </div>

@@ -15,10 +15,10 @@ export type Alert = {
 };
 
 export const CONFIG = {
-  CHART_DATA_POINTS: 600, // 10 mins
-  ALERT_DATA_POINTS: 120, // 2 mins
+  CHART_DATA_POINTS: 600,
+  ALERT_DATA_POINTS: 10, 
   POLL_INTERVAL: 1000,
-  HIGH_LOAD_THRESHOLD: 0.3,
+  HIGH_LOAD_THRESHOLD: .3,
 } as const;
 
 export type Episode = {

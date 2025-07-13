@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { DataPoint } from "@/lib/definitions";
 
 type Props = {
@@ -11,7 +11,8 @@ export default function TimeSeriesChart({ data }: Props) {
       <LineChart data={data}>
         <XAxis
           dataKey="timestamp"
-          interval={40}
+          domain={['dataMin', 'dataMax']}
+          interval="preserveStartEnd"
           tickFormatter={(value) =>
             new Date(value).toLocaleTimeString([], {
               hour: "2-digit",
@@ -21,6 +22,26 @@ export default function TimeSeriesChart({ data }: Props) {
           }
         />
         <YAxis />
+         <Tooltip
+          labelFormatter={(value) =>
+            new Date(value).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false,
+            })
+          }
+          formatter={(value) => [`${(value * 100).toFixed(2)}%`, 'CPU Load']}
+          contentStyle={{
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            border: '1px solid #333',
+            borderRadius: '5px',
+            color: 'white'
+          }}
+          labelStyle={{
+            color: 'white'
+          }}
+        />
         <Line
           type="monotone"
           dataKey="loadAverage"

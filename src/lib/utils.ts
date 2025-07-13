@@ -5,7 +5,6 @@ export const checkTransition = (
   currentData: DataPoint,
   currentEpisode: Episode | null
 ): null | { episode: Episode; alert: Alert } => {
-
   // not enough data to check
   if (prevList.length < CONFIG.ALERT_DATA_POINTS - 1) {
     return null;
@@ -25,23 +24,23 @@ export const checkTransition = (
     (data) => data.loadAverage >= CONFIG.HIGH_LOAD_THRESHOLD
   );
 
-  if (isHighLoad) {
+  console.log('isHighLoad', isHighLoad)
 
+  if (isHighLoad) {
     const newEpisode: Episode = {
       state: "high_load",
       startTime: currentBatch[0].timestamp,
     };
-    const duration = CONFIG.ALERT_DATA_POINTS * CONFIG.POLL_INTERVAL;
 
+    // const duration = CONFIG.ALERT_DATA_POINTS * CONFIG.POLL_INTERVAL;
+
+    // Not alerting if issue persisting - but showing the episode.
     if (currentEpisode?.state !== "high_load") {
-
       return {
         episode: newEpisode,
         alert: {
           type: "load",
-          message: `CPU is under heavy load for ${Math.floor(
-            duration / 60000
-          )}m`,
+          message: `CPU is under heavy load since: ${new Date(currentBatch[0].timestamp).toLocaleTimeString()}`,
           timestamp: currentBatch[0].timestamp,
         },
       };
@@ -49,7 +48,6 @@ export const checkTransition = (
   }
 
   if (isInRecovery) {
-
     const duration = currentEpisode?.startTime
       ? Date.parse(currentData.timestamp) - Date.parse(currentEpisode.startTime)
       : 0;
@@ -61,7 +59,7 @@ export const checkTransition = (
       },
       alert: {
         type: "recovery",
-        message: `CPU has recovered from heavy load (lasted ${Math.floor(
+        message: `CPU has recovered from heavy load at ${new Date(currentData.timestamp).toLocaleTimeString()} (lasted ${Math.floor(
           duration / 60000
         )}m)`,
         timestamp: currentData.timestamp,
@@ -72,6 +70,19 @@ export const checkTransition = (
   return null;
 };
 
-export const formatPercentage = (value: number) => {
-  return (value * 100).toFixed(2) + '%'
-}
+export const formatPercentage = (value: number): string => {
+  return (value * 100).toFixed(2) + "%";
+};
+
+export const getColorCode = (value: number): string => {
+
+  const warningThreshold = CONFIG.HIGH_LOAD_THRESHOLD * 0.8;
+
+  if (value < warningThreshold) {
+    return "green";
+  } else if (value < CONFIG.HIGH_LOAD_THRESHOLD) {
+    return "yellow";
+  } else {
+    return "red";
+  }
+};
