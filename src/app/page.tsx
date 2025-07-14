@@ -5,6 +5,7 @@ import { CONFIG, DataPoint, Alert, Episode } from "@/lib/definitions";
 import { checkTransition, formatPercentage, getColorCode } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import TimeSeriesChart from "@/components/TimeSeriesChart";
+import Alerts from "@/components/Alerts";
 import styles from "./page.module.css";
 
 const loadFromLocalStorage = (key: string) => {
@@ -23,7 +24,6 @@ const saveToLocalStorage = (
 ) => {
   try {
     if (typeof window === "undefined") return null;
-    console.log('saved on ls:', data)
     localStorage.setItem(key, JSON.stringify(data));
   } catch (e) {
     console.error("Error saving to local storage", e);
@@ -43,7 +43,7 @@ const processNewDataPoint = (
   setTimeSeriesData(currentList.slice(-CONFIG.CHART_DATA_POINTS));
   saveToLocalStorage('items', currentList.slice(-CONFIG.CHART_DATA_POINTS))
   const transition = checkTransition(prevList, currentData, currentEpisode);
-  console.log('transition', transition)
+
   if (transition) {
     setCurrentEpisode(() => {
       saveToLocalStorage("episode", transition.episode);
@@ -88,8 +88,13 @@ export default function Home() {
     }
 
     // persist the history
-    if (savedAlerts) {
-      setAlerts(savedAlerts)
+    if (savedAlerts && savedAlerts.length) {
+      if (new Date(savedAlerts[savedAlerts.length - 1].timestamp).getTime() > cutOffDate) {
+        setAlerts(savedAlerts);
+      } else {
+        setAlerts([])
+        localStorage.removeItem('alerts')
+      }
     }
 
     if (savedCurrentEpisode) {
@@ -150,8 +155,8 @@ export default function Home() {
 
       {/* maybe two columns for high load and recovery - also showing the total number in the header
       also both should have see more  */}
-
-      {alerts.length > 0 && (
+    <Alerts alerts={alerts}/>
+      {/* {alerts.length > 0 && (
         <div>
           {alerts
             .slice()
@@ -169,10 +174,10 @@ export default function Home() {
                   {alert.type === "recovery" ? "✅" : "⚠️"}{" "}
                   {alert.message}
                 </div>
-              </div>
+              </div >
             ))}
         </div>
-      )}
+      )} */}
     </div>
   );
 }

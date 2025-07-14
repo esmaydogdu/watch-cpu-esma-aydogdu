@@ -24,8 +24,6 @@ export const checkTransition = (
     (data) => data.loadAverage >= CONFIG.HIGH_LOAD_THRESHOLD
   );
 
-  console.log('isHighLoad', isHighLoad)
-
   if (isHighLoad) {
     const newEpisode: Episode = {
       state: "high_load",
@@ -34,7 +32,7 @@ export const checkTransition = (
 
     // const duration = CONFIG.ALERT_DATA_POINTS * CONFIG.POLL_INTERVAL;
 
-    // Not alerting if issue persisting - but showing the episode.
+    // Not alerting if issue persists - instead, show the episode.
     if (currentEpisode?.state !== "high_load") {
       return {
         episode: newEpisode,
