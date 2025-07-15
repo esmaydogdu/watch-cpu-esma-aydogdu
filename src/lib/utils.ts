@@ -38,7 +38,7 @@ export const checkTransition = (
         episode: newEpisode,
         alert: {
           type: "load",
-          message: `CPU is under heavy load since: ${new Date(currentBatch[0].timestamp).toLocaleTimeString()}`,
+          message: `Heavy load`,
           timestamp: currentBatch[0].timestamp,
         },
       };
@@ -57,9 +57,7 @@ export const checkTransition = (
       },
       alert: {
         type: "recovery",
-        message: `CPU has recovered from heavy load at ${new Date(currentData.timestamp).toLocaleTimeString()} (lasted ${Math.floor(
-          duration / 60000
-        )}m)`,
+        message: `Recovery after ${Math.floor(duration / 60000)}m high-load`,
         timestamp: currentData.timestamp,
       },
     };
@@ -73,7 +71,6 @@ export const formatPercentage = (value: number): string => {
 };
 
 export const getColorCode = (value: number): string => {
-
   const warningThreshold = CONFIG.HIGH_LOAD_THRESHOLD * 0.8;
 
   if (value < warningThreshold) {
@@ -84,3 +81,13 @@ export const getColorCode = (value: number): string => {
     return "red";
   }
 };
+
+export const printTime = (date: number): string =>
+  new Date(date).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+

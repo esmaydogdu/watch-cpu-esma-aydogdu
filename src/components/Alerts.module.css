@@ -1,0 +1,36 @@
+.alertsList {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.alertList {
+  margin: 0 8px;
+}
+.alertList button{
+  min-width: 60%;
+  margin: 12px auto 0;
+  display: block;
+  cursor: pointer;
+}
+.alertsListHeader {
+  margin-bottom: 8px;
+}
+
+.alertsListItem {
+  width: 100%;
+  padding: 4px 32px;
+  list-style: none;
+}
+.alertsListItem:nth-child(odd) {
+  background-color: #362c42;
+}
+.alertsListItem:nth-child(even) {
+  background-color: #453656;
+}
+.showMoreButton {
+  padding: 4px;
+  border: 2px solid #8884d8;
+  border-radius: 2px;
+  font-size: 16px;
+}

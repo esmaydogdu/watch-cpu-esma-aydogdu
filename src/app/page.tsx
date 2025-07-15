@@ -1,12 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CONFIG, DataPoint, Alert, Episode } from "@/lib/definitions";
+import { CONFIG, DataPoint, Alert, Episode, EpisodeText } from "@/lib/definitions";
 import { checkTransition, formatPercentage, getColorCode } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import TimeSeriesChart from "@/components/TimeSeriesChart";
 import Alerts from "@/components/Alerts";
 import styles from "./page.module.css";
+
+const cutOffDate = Date.now() - 1000 * 60 * 15;
 
 const loadFromLocalStorage = (key: string) => {
   try {
@@ -41,7 +43,7 @@ const processNewDataPoint = (
   const currentList = [...prevList, currentData];
 
   setTimeSeriesData(currentList.slice(-CONFIG.CHART_DATA_POINTS));
-  saveToLocalStorage('items', currentList.slice(-CONFIG.CHART_DATA_POINTS))
+  saveToLocalStorage("items", currentList.slice(-CONFIG.CHART_DATA_POINTS));
   const transition = checkTransition(prevList, currentData, currentEpisode);
 
   if (transition) {
@@ -73,27 +75,26 @@ export default function Home() {
     const savedCurrentEpisode = loadFromLocalStorage("episode");
     const savedAlerts = loadFromLocalStorage("alerts");
 
-    // stale data if 15 mins > old
-    const cutOffDate = Date.now() - 1000 * 60 * 15;
-
     if (savedData && savedData.length) {
       const freshData = savedData.filter(
         (d: DataPoint) => new Date(d.timestamp).getTime() > cutOffDate
       );
       setTimeSeriesData(freshData);
       if (freshData.length !== savedData.length) {
-      saveToLocalStorage("items", freshData);
-    }
-
+        saveToLocalStorage("items", freshData);
+      }
     }
 
     // persist the history
     if (savedAlerts && savedAlerts.length) {
-      if (new Date(savedAlerts[savedAlerts.length - 1].timestamp).getTime() > cutOffDate) {
+      if (
+        new Date(savedAlerts[savedAlerts.length - 1].timestamp).getTime() >
+        cutOffDate
+      ) {
         setAlerts(savedAlerts);
       } else {
-        setAlerts([])
-        localStorage.removeItem('alerts')
+        setAlerts([]);
+        localStorage.removeItem("alerts");
       }
     }
 
@@ -101,8 +102,8 @@ export default function Home() {
       if (new Date(savedCurrentEpisode.startTime).getTime() > cutOffDate) {
         setCurrentEpisode(savedCurrentEpisode);
       } else {
-        setCurrentEpisode(null)
-        localStorage.removeItem('episode')
+        setCurrentEpisode(null);
+        localStorage.removeItem("episode");
       }
     }
   }, []);
@@ -123,61 +124,38 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <div className={styles.top}>
-        {
-          data && (
-            <div className={styles.card}>
-              <div className={styles.cardHeader}>
-                <span className={`blinking blinking--${getColorCode(data?.loadAverage)}`}></span>
-                <p>CPU Load</p>
-              </div>
-              <div className={styles.cardValue}>{formatPercentage(data?.loadAverage)}</div>
-            </div>
-          )
-        }
         
-        {
-          currentEpisode && (
-            <div className={styles.card}>
-              {currentEpisode.state} since {new Date(currentEpisode.startTime).toLocaleTimeString()}
+        {data && (
+          <div className={styles.pageHeader}>
+            <span
+              className={`blinking blinking--${getColorCode(
+                data?.loadAverage
+              )}`}
+            ></span>
+            <p>CPU Load:</p>
+            <div className={styles.cpuValue}>
+              {formatPercentage(data?.loadAverage)}
             </div>
-          )
-        }
+          </div>
+        )}
+
+        {currentEpisode && (
+          <div className={styles.pageHeader}>
+            <p>
+            {EpisodeText[currentEpisode.state]}
+            {new Date(currentEpisode.startTime).toLocaleTimeString()}
+            </p>
+          </div>
+        )}
       </div>
 
-      {
-        timeSeriesData.length === 0 ? (
-          <p>Collecting CPU data...</p>
-        ) : (
-          <TimeSeriesChart data={timeSeriesData} />
-        )
-      }
+      {timeSeriesData.length === 0 ? (
+        <p>Collecting CPU data...</p>
+      ) : (
+        <TimeSeriesChart data={timeSeriesData} />
+      )}
 
-
-      {/* maybe two columns for high load and recovery - also showing the total number in the header
-      also both should have see more  */}
-    <Alerts alerts={alerts}/>
-      {/* {alerts.length > 0 && (
-        <div>
-          {alerts
-            .slice()
-            .reverse()
-            .map((alert, index) => (
-              <div
-                key={index}
-                className={`p-3 rounded-lg border ${
-                  alert.type === "recovery"
-                    ? "bg-green-50 border-green-200 text-green-800"
-                    : "bg-red-50 border-red-200 text-red-800"
-                }`}
-              >
-                <div className="font-medium">
-                  {alert.type === "recovery" ? "✅" : "⚠️"}{" "}
-                  {alert.message}
-                </div>
-              </div >
-            ))}
-        </div>
-      )} */}
+      <Alerts alerts={alerts} />
     </div>
   );
 }

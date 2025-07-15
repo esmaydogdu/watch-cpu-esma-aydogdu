@@ -10,7 +10,7 @@ export type DataPoint = {
 export type Alert = {
   type: AlertType;
   message: string;
-  timestamp: number | string;
+  timestamp: string;
   duration?: number;
 };
 
@@ -21,8 +21,14 @@ export const CONFIG = {
   HIGH_LOAD_THRESHOLD: .3,
 } as const;
 
+export const EpisodeText = {
+  'high_load': 'Under heavy load since: ',
+  'normal': 'Last recovered at: '
+} as const
+
 export type Episode = {
-  state: "high_load" | "normal";
+  state: keyof typeof EpisodeText;
   startTime: string;
-  duration?: number; // calculated in real-time
+  duration?: number;
 };
+
