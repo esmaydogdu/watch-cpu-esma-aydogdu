@@ -17,41 +17,11 @@ type DataPoint = {
   loadAverage: number;
 }
 ```
-This information is polled in every 10 seconds using `useQuery` and the `DataPoint` is being processed,
+This information is polled in every 2 seconds using `useQuery` and the `DataPoint` is being processed, with `checkTransition` 
 
-This processing is imitating maintaining a list of consecutive discrete data points.
-This list is persisted on the localStorage as well the runtime.
+Latest dataPoints and alerts are persisted in the localstorage with cleanups to exclude stale data.
 
-For the alerts, it keeps a list of `State`
 
-```
-type StateType = 'normal' | 'high_load' | 'recovered'
-
-type StateTransition = {
-  from: StateType,
-  to: StateType,
-  timestamp: string,
-  dataPoint: DataPoint
-}
-
-type State = {
-  type: StateType,
-  transition?: StateTransition,
-}
-```
-
-And to display alerts, it appends to the beginning of this list,
-It clears the list displaying older than 2 mins
-
-the items in the list are calculated value of State which had a different state than before, possible values are: 
-
-`'normal' | 'high_laod' | 'recovered'`
-
-displaying transitions on the page which are:
-
-`from: 'normal' to: 'high_load'` (to alert: heavy CPU (detected for 2 mins, each these transitions have timestamp property which)...)
-
-`from: 'high_load' to: 'recovered'` (to alert: CPU load has recovered)
 
 # Improvement Points
 
@@ -60,9 +30,9 @@ displaying transitions on the page which are:
 
 # Creative extension ideas
 
-  - Serving an html from a nodejs environment, painting the screen with the changing cpu load on the operating system. 
+  - Serving an HTML page from a Node.js environment that visualizes real-time CPU load changes through animated graphics updated in an infinite loop
 
-  - Setting an `--cpu-color` variable and using this on the <canvas> to change the color of a vertical brushstroke (with nth-child selectors) on a rectangle window (scaled for 10 minutes) 
+  - Setting `--cpu-height` and `--cpu-color` CSS variables to render vertical bars on a canvas where **height** represents CPU load percentage and **color** indicates severity levels (green/yellow/red) across a 10-minute timeline
  
 
  

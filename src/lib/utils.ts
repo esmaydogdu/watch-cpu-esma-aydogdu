@@ -5,7 +5,7 @@ export const checkTransition = (
   currentData: DataPoint,
   currentEpisode: Episode | null
 ): null | { episode: Episode; alert: Alert } => {
-  // not enough data to check
+
   if (prevList.length < CONFIG.ALERT_DATA_POINTS - 1) {
     return null;
   }

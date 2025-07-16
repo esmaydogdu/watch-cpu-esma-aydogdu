@@ -1,6 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { DataPoint } from "@/lib/definitions";
-import { printTime } from "@/lib/utils";
+import { printTime, formatPercentage } from "@/lib/utils";
 
 type Props = {
   data: DataPoint[];
@@ -18,19 +18,12 @@ export default function TimeSeriesChart({ data }: Props) {
         />
         <YAxis />
          <Tooltip
-          labelFormatter={(value) =>
-            new Date(value).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: false,
-            })
-          }
+          labelFormatter={printTime}
           formatter={(value) => {
             if (!Number(value)) {
               return ['--', 'CPU Load']
             } 
-            return [`${(value as number * 100).toFixed(2)}%`, 'CPU Load']
+            return [`${formatPercentage(value as number)}%`, 'CPU Load']
           }}
           contentStyle={{
             backgroundColor: 'rgba(0, 0, 0, 0.9)',

@@ -14,11 +14,15 @@ export type Alert = {
   duration?: number;
 };
 
+/*
+  CHART_DATA_POINTS * POLL_INTERVAL = 10 min window
+  ALERT_DATA_POINTS * POLL_INTERVAL = 2 min alert check
+*/
 export const CONFIG = {
-  CHART_DATA_POINTS: 600,
-  ALERT_DATA_POINTS: 10, 
-  POLL_INTERVAL: 1000,
-  HIGH_LOAD_THRESHOLD: .3,
+  CHART_DATA_POINTS: 300,
+  ALERT_DATA_POINTS: 60, 
+  POLL_INTERVAL: 2000,
+  HIGH_LOAD_THRESHOLD: 1, // over 100%
 } as const;
 
 export const EpisodeText = {

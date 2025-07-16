@@ -49,8 +49,8 @@ a {
 }
 .blinking {
   display: inline-block;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background-color: white;
   animation: blink 1s infinite;
